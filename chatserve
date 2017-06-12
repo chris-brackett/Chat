@@ -1,0 +1,98 @@
+#!/usr/bin/python
+#chatserve
+#Chris Brackett - bracketc@oregonstate.edu
+#CS372 - Project 1
+#2/8/2017
+#chatserve based on python server shown in lecture slides
+
+#------------------------------START FUNCTIONS------------------------------#
+#Note: Socket parameters are passed around and returned with these functions
+#in order to disconnect and reconnect within the checkQuit function
+
+#get handle from user and make sure it is valid
+def getHandle():
+    handle = raw_input('What is your handle? ')
+    while (len(handle) > 10 or "\quit" in handle):
+        print "Your handle must be 10 characters or less and not cointain \quit."
+        handle = raw_input('What is your handle? ')
+    return handle
+
+#if quit command was in the message, close the connection and wait for a new one
+def checkQuit( message, connectionSocket, addr, serverSocket ):
+    if "\quit" in message:
+        connectionSocket.close()
+        print "Connection closed. Awaiting new connection..."
+        connectionSocket, addr = serverSocket.accept()
+        print "Connection successful!"
+        return True, connectionSocket, addr
+    else:
+        return False, connectionSocket, addr
+
+#get message and send with handle preprended to it, check for quit command
+def sendMessage( handle, connectionSocket, addr, serverSocket ):
+    messageOut = raw_input(handle+'> ')
+    connectionSocket.send(handle+'> ' + messageOut)
+    quitBool, connectionSocket, addr = checkQuit(messageOut, connectionSocket, addr, serverSocket)
+    return quitBool, connectionSocket, addr
+
+#recieve message from client, print it, and check for quit command
+def recvMessage( connectionSocket, addr, serverSocket ):
+    messageIn = connectionSocket.recv(512)
+    print messageIn
+    quitBool, connectionSocket, addr = checkQuit(messageIn, connectionSocket, addr, serverSocket)
+    return quitBool, connectionSocket, addr
+
+#set up server socket
+def serverSetup( args ):
+     serverPort = int(args[1])
+     serverSocket = socket(AF_INET, SOCK_STREAM)
+     serverSocket.bind(('', serverPort))
+     serverSocket.listen(1)
+     return serverSocket
+
+#-------------------------------END FUNCTIONS-------------------------------#
+
+#-------------------------------START PROGRAM-------------------------------#
+
+#check command line arguements for port number
+import sys
+if len(sys.argv) != 2:
+    print "Usage: python chatserve <port#>"
+    quit()
+
+#set up socket
+from socket import *
+serverSocket = serverSetup(sys.argv)
+
+#get valid handle from user
+handle = getHandle()
+
+#get the initial connection from the client
+print "Awaiting client connection..."
+connectionSocket, addr = serverSocket.accept()
+print "Connection successful!"
+quitCommand = False
+
+#try and except to exit gracefully if ctrl+c is pressed
+try:
+    #main loop for sending and receiving messages
+    while 1:
+        #get message, check for quit command, disconnect as needed
+        quitCommand, connectionSocket, addr = recvMessage(connectionSocket, addr, serverSocket)
+
+        #if no quit command, send a message back, check for quit command, disconnet as needed
+        if quitCommand == False:
+            quitCommand, connectionSocket, addr = sendMessage(handle, connectionSocket, addr, serverSocket)
+
+#close the socket and quit if ctrl+c is pressed during the program
+except KeyboardInterrupt:
+    #if socket hasn't been closed yet, send quit command to client and then close the socket
+    try:
+        connectionSocket.send(handle+'> ' +"\quit - KeyboardInterrupt")
+        connectionSocket.close()
+        print "\nProgram terminated - socket closed."
+    except:
+        print "\nProgram terminated."
+    quit()
+
+#--------------------------------END PROGRAM--------------------------------#

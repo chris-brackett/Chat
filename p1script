@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+gcc -o chatclient chatclient.c
+chmod +x chatserve
