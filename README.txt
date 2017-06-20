@@ -1,5 +1,5 @@
-CS372 - Project 1 README
-Chris Brackett - bracketc@oregonstate.edu
+Chris Brackett
+2/8/2017
 
 Instructions:
 1.) Unzip all files into a folder.
